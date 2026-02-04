@@ -1,10 +1,6 @@
-name: Build Android APK
+name: Build Android APK (Diagnostic)
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -23,28 +19,29 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install buildozer
-        echo "Buildozer version:"
-        buildozer --version
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip openjdk-11-jdk python3-pip autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+        echo "System info:"
+        uname -a
+        java -version
     
-    - name: Initialize Buildozer
+    - name: Build APK with detailed logging
       run: |
-        buildozer init || true
-        ls -la
-    
-    - name: Build APK
-      run: |
-        echo "Starting build..."
-        buildozer android debug 2>&1 || true
+        echo "Starting build with verbose logging..."
+        buildozer android debug --verbose 2>&1 | tee build.log
         echo "Build completed"
     
-    - name: Check build results
+    - name: Check bin directory contents
       run: |
-        ls -la
+        echo "Checking bin directory:"
         ls -la bin/ || true
+        echo "Checking current directory:"
+        ls -la
+        echo "Last 50 lines of build log:"
+        tail -50 build.log
     
-    - name: Upload APK
+    - name: Upload build logs
       uses: actions/upload-artifact@v4
       with:
-        name: artnet-controller-apk
-        path: bin/*.apk
-        if-no-files-found: warn
+        name: build-logs
+        path: build.log
